@@ -1,6 +1,6 @@
 /**
- *	(C)opyright 2006-2012 Hanns Holger Rutz. All rights reserved.
- *	Distributed under the GNU General Public License (GPL).
+ *	(C)opyright 2006-2012 Hanns Holger Rutz.
+ *	Placed in the public domain.
  *
  *	Class dependancies: none
  *

@@ -8,12 +8,12 @@ SimpleRecorder is a simple SuperCollider class providing an audio signal recorde
 
 ### requirements / installation
 
-But the `.sc` class file in your SuperCollider extensions folder. Sorry, I dislike the new help format (mostly because it costs you a lot of work to write a simple thing), thus there is no properly format help file. The `.scd` file serves as a quick references of the functionality, though.
+Put the `.sc` class file in your SuperCollider extensions folder. Sorry, I dislike the new help format (mostly because it costs you a lot of work to write a simple thing), thus there is no properly formatted help file. The `.scd` file serves as a quick references of the functionality, though.
 
 The class has just been cleaned up a bit and tested with SC 3.5. It should probably work with much older versions, too.
 
 ### future ideas
 
  - Folder selection should be in the GUI
-  - A meter and headroom display should be in the GUI
+ - A meter and headroom display should be in the GUI
   

@@ -9,7 +9,7 @@ s.options.numOutputBusChannels = ~numOutputChannels;
 s.waitForBoot {
   SynthDef( \beep, { arg out = 0, amp = 0.3, freq = 1000;
 	var env = EnvGen.ar( Env([ 0, 1, 1, 0, 0, 1, 1, 0 ], [ 0.01, 0.06, 0.01, 0.06, 0.01, 0.06, 0.01 ]), doneAction: 2 );
-	Out.ar( out, SinOsc.ar( freq ) * env );
+	Out.ar( out, SinOsc.ar( freq ) * env * amp );
   }).send( s );
   s.meter.window.alwaysOnTop = true;
 };
@@ -33,9 +33,9 @@ r.makeWindow.alwaysOnTop = true;
 ~freqMin      = 20;
 ~freqMax      = 20000;
 ~sweepDur     = 24;
-~preWait      = 1;
+~preWait      = 2;
 ~reverb       = 3;
-~amp          = 0.9;
+~amp          = -15.dbamp; // 0.9;
 ~beep         = true;
 
 c = Bus.audio( s, ~micChannels + 1 );

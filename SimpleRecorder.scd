@@ -1,6 +1,6 @@
 // A simple audio recorder for SuperCollider.
 //
-// (C)opyright 2006-2012 by Hanns Holger Rutz.
+// (C)opyright 2006-2015 by Hanns Holger Rutz.
 //
 // Permission is hereby granted to do whatever
 // you wish with the source code. It comes
@@ -33,7 +33,7 @@ x = { var f, g, h;
 	f = LFSaw.kr(0.4, 0, 24, LFSaw.kr([8,7.23], 0, 3, 80)).midicps; // glissando function
 	g = CombN.ar(SinOsc.ar(f, 0, 0.04), 0.2, 0.2, 4); // echoing sine wave
 	h = CombL.ar(
-		RLPF.ar(LFPulse.ar(FSinOsc.kr(0.05,0,80,160),0,0.4,0.05), 
+		RLPF.ar(LFPulse.ar(FSinOsc.kr(0.05,0,80,160),0,0.4,0.05),
 		   FSinOsc.kr([0.6,0.7],0,3600,4000), 0.2),
 		0.3, [0.2,0.25], 2);
 	g.asArray ++ h.asArray;
@@ -51,15 +51,16 @@ r.prepareAndRecord;
 x.free;
 r.stop;
 
-// show recorded file in the finder (OS X only)
-r.revealInFinder;
+// show recorded file in the Finder (OS X) or folder on desktop (Linux)
+r.revealOnDesktop;
 
 /////////////////////////////////////////////
 // other functionality
 
-y = Group.tail( s );
-r.setTarget( y );  // recording synth will be here
+y = Group.tail(s);
+r.setTarget(y);  // recording synth will be here
 
-// prepareAndRecordToBundle -- if you want to start recording sample accurately with other synths starting
+// prepareAndRecordToBundle --
+// if you want to start recording sample accurately with other synths starting
 
 r.node;  // current recording synth, nil if none

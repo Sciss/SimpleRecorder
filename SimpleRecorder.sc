@@ -1,5 +1,5 @@
 /**
- *	(C)opyright 2006-2012 Hanns Holger Rutz.
+ *	(C)opyright 2006-2015 Hanns Holger Rutz.
  *	Placed in the public domain.
  *
  *	Class dependancies: none
@@ -7,12 +7,13 @@
  *	Basically a copy-and-paste from Server and ServerPlusGUI
  *
  *	Changelog:
- *		30-Jun-06		added setTarget
- *		15-Aug-07		added support for OSCBundle
- *		25-Jun-08		using thisProcess.platform.recordingsDir, and +/+
- *       08-Jul-12     bits of cleanup. remove TypeSafe dependency
+ *		30-Jun-06	  added setTarget
+ *		15-Aug-07	  added support for OSCBundle
+ *		25-Jun-08	  using thisProcess.platform.recordingsDir, and +/+
+ *      08-Jul-12     bits of cleanup. remove TypeSafe dependency
+ *      24-Mar-15     fixed tryChanged dependency; now revealOnDesktop works for Linux
  *
- *	@version	0.17, 08-Jul-12
+ *	@version	0.18.0, 24-Mar-15
  *	@author	Hanns Holger Rutz
  *
  *	@todo	peak meter
@@ -21,9 +22,10 @@
  */
 SimpleRecorder {
 	var <server;
-	var buf, <node, <>headerFormat = "aiff", <>sampleFormat = "float"; 	var <channelOffset		= 0;
+	var buf, <node, <>headerFormat = "aiff", <>sampleFormat = "float";
+	var <channelOffset		= 0;
 	var <numChannels		= 2;
-	var <>folder; //		= "recordings/";
+	var <>folder;
 	var window;
 	var <isPrepared		= false;
 	var recentPath		= nil;
@@ -32,7 +34,7 @@ SimpleRecorder {
 	var targetAddAction	= \addToTail;
 
 	classvar headerSuffix;
-	
+
 	*initClass {
 		headerSuffix		= IdentityDictionary.new;
 		headerSuffix.put( \aiff, "aif" );
@@ -48,7 +50,7 @@ SimpleRecorder {
 	*new { arg server;
 		^super.new.prInitRecorder( server );
 	}
-	
+
 	*prMethodWarn { arg method, message;
 		(method.ownerClass.name ++ ":" ++ method.name ++ " : " ++ message).warn;
 	}
@@ -62,18 +64,24 @@ SimpleRecorder {
 		folder	= thisProcess.platform.recordingsDir;
 	}
 
-	revealInFinder {
-		var path;
-		
+	revealOnDesktop {
+		var path, cmd;
+
 		if( recentPath.notNil, {
 			path = PathName( recentPath );
-			unixCmd( "osascript -e 'tell application \"Finder\"' -e activate -e 'open location \"file:\/\/" ++ path.pathOnly ++
-				"\"' -e 'select file \"" ++ path.fileName ++ "\" of folder of the front window' -e 'end tell'" );
+			cmd = if (thisProcess.platform.name === \linux, {
+				"xdg-open \"" ++ path.pathOnly ++ "\""; // not possible to select file, yet
+			}, {
+				"osascript -e 'tell application \"Finder\"' -e activate -e 'open location \"file:\/\/" ++ path.pathOnly ++
+					"\"' -e 'select file \"" ++ path.fileName ++ "\" of folder of the front window' -e 'end tell'";
+			});
+			cmd.postln;
+			cmd.systemCmd;
 		}, {
 			SimpleRecorder.prMethodError( thisMethod, "Soundfile has not yet been specified" );
 		});
 	}
-	
+
 	channelOffset_ { arg off;
 		channelOffset = off;
 		this.tryChanged( \channelOffset );
@@ -83,7 +91,7 @@ SimpleRecorder {
 		numChannels = num;
 		this.tryChanged( \numChannels );
 	}
-	
+
 	setTarget { arg group, addAction = \addToTail;
 		target			= group;
 		targetAddAction	= addAction;
@@ -123,7 +131,7 @@ SimpleRecorder {
 			"Recording".postln;
 		});
 	}
-	
+
 	recordToBundle { arg bundle;
 		node = Synth.basicNew( "simpleRecorder" ++ buf.numChannels, server );
 		bundle.add( node.newMsg( target ?? { RootNode( server )},
@@ -153,16 +161,16 @@ SimpleRecorder {
 			"Not Recording".warn;
 		});
 	}
-	
+
 	stop {
-		if( node.notNil, { 
+		if( node.notNil, {
 			node.free;
 			node = nil;
 			"Recording Stopped".postln;
 		});
 		if( buf.notNil, {
 			buf.close({ arg buf; buf.free; });
-			buf = nil; 
+			buf = nil;
 			isPrepared = false;
 			this.tryChanged( \stopped );
 		}, {
@@ -182,10 +190,11 @@ SimpleRecorder {
 			^false;
 		});
 	}
-	
+
 	prepareToBundle { arg bundle, path;
 		var def;
 		if( path.isNil, {
+			if (File.exists(folder).not, { File.mkdir(folder) });
 			path = folder +/+ "SC_" ++ Date.localtime.stamp ++ "." ++ headerSuffix[ headerFormat.asSymbol ];
 		});
 		if( isPrepared, {
@@ -195,14 +204,14 @@ SimpleRecorder {
 			if( server.serverRunning, {
 				recentPath = path;
 				buf = Buffer( server, 65536, numChannels );
-//				
+//
 //				buf = Buffer.alloc( server, 65536, numChannels, { arg buf;
 //						buf.writeMsg( path, headerFormat, sampleFormat, 0, 0, true ); });
 				if( buf.notNil, {
 					bundle.addPrepare( buf.allocMsg );
 					bundle.addPrepare( buf.writeMsg( path, headerFormat, sampleFormat, 0, 0, true ));
 					def = SynthDef( "simpleRecorder" ++ numChannels, { arg i_bus, i_buf;
-						DiskOut.ar( i_buf, In.ar( i_bus, numChannels )); 
+						DiskOut.ar( i_buf, In.ar( i_bus, numChannels ));
 					});
 					bundle.addPrepare([ "/d_recv", def.asBytes ]);
 					^true;
@@ -216,7 +225,7 @@ SimpleRecorder {
 			});
 		});
 	}
-	
+
 	cmdPeriod {
 		if( node.notNil, {
 			node = nil;
@@ -229,13 +238,13 @@ SimpleRecorder {
 		this.tryChanged( \cmdPeriod );
 		CmdPeriod.remove( this );
 	}
-	
+
 	makeWindow { arg w;
 		var ggRec, ggChannelOffset, ggTimer, ggNumChannels, serverRunning, serverStopped, ctlr, ctlr2,
 		    recTimerTask, recTimerFunc;
-		
+
 		if( window.notNil, { ^window.front });
-		
+
 		if( w.isNil, {
 			w = window		= Window( "Recorder for Server '" ++ server.name.asString ++ "'",
 								Rect( 10, Window.screenBounds.height - 96, 340, 46 ), resizable: false );
@@ -262,12 +271,12 @@ SimpleRecorder {
 					this.stop;
 				};
 			});
-		
+
 		w.view.decorator.shift( 4, 0 );
 
 		ggTimer = StaticText( w, Rect( 0, 0, 72, 24 ))
 			.string_( "00:00:00" );
-		
+
 		StaticText( w, Rect( 0, 0, 24, 24 ))
 			.align_( \right )
 			.string_( "Bus" );
@@ -278,7 +287,7 @@ SimpleRecorder {
 			.action_({ arg b;
 				this.channelOffset_( b.value.asInteger );
 			});
-			
+
 		StaticText( w, Rect( 0, 0, 48, 24 ))
 			.align_( \right )
 			.string_( "Chans" );
@@ -289,7 +298,7 @@ SimpleRecorder {
 			.action_({ arg b;
 				this.numChannels_( b.value.asInteger );
 			});
-	
+
 		serverRunning = {
 			this.prInAppClock({
 				ggRec.enabled = true;
@@ -305,7 +314,7 @@ SimpleRecorder {
 				ggNumChannels.enabled = true;
 			});
 		};
-			
+
 		if( server.serverRunning, serverRunning, serverStopped );
 
 		recTimerFunc = {
@@ -383,7 +392,7 @@ SimpleRecorder {
 				recTimerTask = Task( recTimerFunc, SystemClock );
 				if( server.serverRunning, serverRunning );
 			});
-			
+
 		if( isPrepared, {
 			if( node.isNil, {
 				ctlr2.update( this, \prepared );
@@ -398,12 +407,22 @@ SimpleRecorder {
 			ctlr.remove;
 			ctlr2.remove;
 		};
-		
+
 		w.front;
 		^w;
 	}
-	
+
 	 prInAppClock { arg func;
 	 	if( this.canCallOS, func, { func.defer });
 	 }
+
+	tryChanged { arg ... args;
+		dependantsDictionary.at( this ).copy.do({ arg item;
+			try {
+				item.update( this, *args );
+			} { arg e;
+				e.reportError;
+			};
+		});
+	}
 }
